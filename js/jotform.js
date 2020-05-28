@@ -3830,6 +3830,9 @@ var JotForm = {
                         case 'control_image':
                           question.labelText !== '' ? values.push(question.labelText) : void(0);
                           break;
+                        case 'control_inline':
+                          question.template !== '' ? values.push(question.template) : void(0);
+                          break;
                         default:
                           question.text !== '' ? values.push(question.text) : void(0);
                           question.description !== '' ? values.push(question.description) :void(0);
@@ -3862,7 +3865,7 @@ var JotForm = {
                                   equation: "{" + (multilineFieldEquation || qname) + "}",
                                   ignoreHiddenFields: "",
                                   insertAsText: "1",
-                                  isLabel: question.type === "control_text" ? "" : "1",
+                                  isLabel: ["control_text", "control_inline"].indexOf(question.type) > -1 ? "" : "1",
                                   newCalculationType: "1",
                                   operands: (multilineFieldEquation || qname),
                                   readOnly: "",
@@ -4493,6 +4496,8 @@ var JotForm = {
         var type = "other";
         if ($('id_' + id) && $('id_' + id).readAttribute('data-type') == "control_text") {
             type = 'html';
+        } else if ($('id_' + id) && $('id_' + id).readAttribute('data-type') == "control_inline") {
+            type = 'inline';
         } else if ($('input_' + id + '_pick') || ($('id_' + id) && $('id_' + id).readAttribute('data-type') == "control_datetime")) {
           type = 'datetime';
         } else if ($('input_' + id + '_duration')) {
@@ -4686,6 +4691,7 @@ var JotForm = {
             try {
                 var fieldType = JotForm.getInputType(term.field);
                 switch (fieldType) {
+                    case "inline":
                     case "combined":
                         if (['isEmpty', 'isFilled'].include(term.operator)) {
                             filled = $$('#id_' + term.field + ' input').collect(function (e) {
@@ -5939,7 +5945,7 @@ var JotForm = {
                 'text', 'email', 'textarea', 'calculation', 'combined', 'address', 'datetime', 'time', 'html', 'authnet', 'paypalpro', 'number', 'radio', 'checkbox',
                 'select', 'matrix', 'widget', 'signature', 'braintree', 'stripe', 'square', 'eway', 'bluepay', 'firstdata', 'chargify', 'echeck', 'payu', 'pagseguro', 'moneris', 'paypal',
                 'dwolla', 'bluesnap', 'paymentwall', 'payment', 'paypalexpress', 'payjunction', '2co', 'cardconnect', 'clickbank', 'onebip', 'worldpay', 'rating', 'hidden',
-                'file', 'other', 'mixed', 'sofort', 'payoneer', 'paysafe', 'gocardless', 'stripeACH', 'paypalSPB', 'cybersource', "paypalcomplete"
+                'file', 'other', 'mixed', 'sofort', 'payoneer', 'paysafe', 'gocardless', 'stripeACH', 'paypalSPB', 'cybersource', "paypalcomplete", 'inline'
                 ].include(JotForm.calculationType(result))) return;
         } catch (e) {
             console.log(e);
@@ -6162,7 +6168,7 @@ var JotForm = {
                         }
                     }
                     break;
-
+                case 'inline':
                 case 'combined':
                 case 'grading':
                     var valArr = [];
@@ -6758,6 +6764,7 @@ var JotForm = {
 
         var resultFieldType = calc.isLabel ? "html" : JotForm.calculationType(result);
         switch (resultFieldType) {
+            case "inline":
             case "html":
                 try {
 
@@ -6809,7 +6816,7 @@ var JotForm = {
                     })
 
                     if (spans.length == 0) {
-                        var contents = calc.isLabel ? $('label_' + result).innerHTML : $('text_' + result).innerHTML;
+                        var contents = calc.isLabel ? $('label_' + result).innerHTML : $((resultFieldType === 'inline' ? 'cid_' : 'text_') + result).innerHTML;
                         if (calc.isLabel) {
                             contents = contents.replace(re, '<span class="replaceTag ' + className + '" default="'+def+'">' + output + '</span>');
                         } else {
@@ -6818,7 +6825,7 @@ var JotForm = {
                                 contents = contents.replace(localRe, '$1<span class="replaceTag ' + className + '" default="'+def+'">' + output + '</span>$2');
                             }
                         }
-                        calc.isLabel ? $('label_' + result).update(contents) : $('text_' + result).update(contents);
+                        calc.isLabel ? $('label_' + result).update(contents) : $((resultFieldType === 'inline' ? 'cid_' : 'text_') + result).update(contents);
                     } else {
                         spans.each(function (span) {
                             span.update(output.stripScripts().stripEvents());
@@ -7205,6 +7212,7 @@ var JotForm = {
                                 JotForm.widgetsWithConditions.push(id);
                                 break;
                             case "combined":
+                            case "inline":
                             case "email":
                                 if (id.indexOf('_field_') > -1) {
                                   JotForm.setFieldConditions('input_' + id, 'autofill', condition);
